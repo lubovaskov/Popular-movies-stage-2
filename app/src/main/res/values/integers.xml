@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="large_poster_width_px">185</integer>
+    <integer name="large_poster_height_px">278</integer>
+</resources>
