@@ -8,4 +8,5 @@ The app needs an API key from https://www.themoviedb.org to work properly. This 
 Example:
 
 org.gradle.jvmargs=-XX\:MaxHeapSize\=256m -Xmx256m
-TheMovieDBAPIKey="bf6092aeb60f45102c1ffff167bb54cd"
+
+TheMovieDBAPIKey="your_api_key_here"
