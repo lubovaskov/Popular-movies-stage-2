@@ -1,15 +1,32 @@
 <resources>
-    <string name="themoviedb_api_key">your_api_key_here</string>
-
+    <!-- Application texts -->
     <string name="app_name">Popular Movies Stage 2</string>
+
+    <!-- Main activity texts -->
     <string name="title_activity_main_popular">Popular Movies</string>
     <string name="title_activity_main_top_rated">Top Movies</string>
-    <string name="title_activity_detail">MovieDetail</string>
+    <string name="title_activity_main_favorite">Favorite Movies</string>
     <string name="main_menu_item_most_popular">Sort by most popular</string>
     <string name="main_menu_item_top_rated">Sort by top rated</string>
+    <string name="main_menu_item_show_favorite">Show favorite</string>
+
+    <!-- Detail activity texts -->
+    <string name="title_activity_detail">MovieDetail</string>
     <string name="movie_detail_poster_description">Movie poster</string>
-    <string name="not_online_error_text">There is no network connection.</string>
-    <string name="url_error_text">Error parsing URL for www.themoviedb.org</string>
-    <string name="json_error_text">Error parsing JSON response from www.themoviedb.org</string>
+    <string name="favorite_button_text_mark">MARK AS\nFAVORITE</string>
+    <string name="favorite_button_text_unmark">UNMARK AS\nFAVORITE</string>
+    <string name="textview_videos_text">Trailers:</string>
+    <string name="textview_reviews_text">Reviews:</string>
+
+    <!-- Error texts -->
+    <string name="not_online_error_text">There is no network connection</string>
     <string name="network_error_text">Error connecting to www.themoviedb.org</string>
+    <string name="unknown_uri_error_text">Unknown uri: </string>
+    <string name="insert_error_text">Problem while inserting into uri: </string>
+    <string name="update_not_implemented_error_text">Update is not implemented</string>
+    <string name="gettype_not_implemented_error_text">getType is not implemented</string>
+    <string name="loader_not_implemented_error_text">Loader not implemented: </string>
+
+    <!-- Other -->
+    <string name="content_authority">com.udacity.popularmoviesstage2</string>
 </resources>

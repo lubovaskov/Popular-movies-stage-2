@@ -1,7 +1,47 @@
 <resources>
+    <!-- Application -->
     <dimen name="app_bar_height">180dp</dimen>
     <dimen name="fab_margin">16dp</dimen>
     <dimen name="text_margin">16dp</dimen>
+
+    <!-- fragment_detail_activity.xml -->
     <dimen name="detail_poster_width">137dp</dimen>
     <dimen name="detail_poster_height">201dp</dimen>
+
+    <dimen name="detail_constraint_layout_vertical_padding">8dp</dimen>
+    <dimen name="detail_constraint_layout_horizontal_padding">16dp</dimen>
+
+    <dimen name="detail_title_text_size">50sp</dimen>
+    <dimen name="detail_title_elevation">4dp</dimen>
+    <dimen name="detail_title_padding">32dp</dimen>
+
+    <dimen name="detail_release_date_text_size">28sp</dimen>
+    <dimen name="detail_release_date_padding">30dp</dimen>
+
+    <dimen name="detail_vote_average_horizontal_padding">30dp</dimen>
+    <dimen name="detail_vote_average_vertical_padding">8dp</dimen>
+
+    <dimen name="detail_favorite_button_text_size">10sp</dimen>
+    <dimen name="detail_favorite_button_horizontal_padding">30dp</dimen>
+
+    <dimen name="detail_overview_text_size">16sp</dimen>
+    <dimen name="detail_overview_padding">8dp</dimen>
+
+    <dimen name="detail_textview_videos_text_size">20sp</dimen>
+    <dimen name="detail_textview_videos_padding_top">4dp</dimen>
+
+    <dimen name="detail_horizontal_divider_height">2dp</dimen>
+
+    <dimen name="detail_textview_reviews_text_size">20sp</dimen>
+    <dimen name="detail_textview_reviews_padding_top">4dp</dimen>
+
+    <!-- list_item_videos.xml -->
+    <dimen name="video_layout_left_padding">8dp</dimen>
+    <dimen name="video_item_layout_padding">20dp</dimen>
+    <dimen name="video_item_name_padding">30dp</dimen>
+
+    <!-- list_item_reviews.xml -->
+    <dimen name="review_layout_padding">8dp</dimen>
+
+
 </resources>

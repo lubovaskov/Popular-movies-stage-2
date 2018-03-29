@@ -2,59 +2,72 @@ package com.udacity.popularmoviesstage2;
 
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
-import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
+import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.GridView;
 
-import com.udacity.popularmoviesstage2.utils.JsonUtils;
+import com.udacity.popularmoviesstage2.adapters.PostersAdapter;
+import com.udacity.popularmoviesstage2.database.TheMovieDBContract;
+import com.udacity.popularmoviesstage2.database.TheMovieDBResolver;
 import com.udacity.popularmoviesstage2.utils.NetworkUtils;
+import com.udacity.popularmoviesstage2.valueobjects.MovieInfo;
+import com.udacity.popularmoviesstage2.webapi.ListWrapper;
+import com.udacity.popularmoviesstage2.webapi.TheMovieDBAPI;
+import com.udacity.popularmoviesstage2.webapi.TheMovieDBAPIClient;
 
-import org.json.JSONException;
-
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
+
+import butterknife.ButterKnife;
+import butterknife.BindView;
+import butterknife.Unbinder;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class MainActivityFragment extends Fragment
-        implements LoaderManager.LoaderCallbacks<String> {
+        implements
+        LoaderManager.LoaderCallbacks<Cursor>,
+        Callback<ListWrapper<MovieInfo>>,
+        PostersAdapter.PostersAdapterOnClickHandler{
 
-    private static final int MOVIES_LOADER_ID = 50;
-    private static final String MOVIES_LOADER_URL_PARAM_NAME = "url";
+    private static final int FAVORITE_LOADER_ID = 20;
+    private static int POSTER_COLUMN_COUNT = 2;
+    private static final String MOVIE_INFOS_PARCELABLE_NAME = "movieInfos";
 
-    private ArrayList<MovieInfo> movieInfos;
+    private Unbinder unbinder;
+    private PostersAdapter rvPostersAdapter;
+
+    @BindView(R.id.recyclerview_posters)
+    RecyclerView rvPosters;
+
+    private List<MovieInfo> movieInfos;
     private MainFragmentListener mCallback;
-    private GridView posterGridView;
-    private String currentSortOrder = NetworkUtils.THEMOVIEDB_URL_SEGMENT_POPULAR; //default sorting is "popular"
+    private String currentSortOrder = TheMovieDBAPI.THEMOVIEDB_URL_SEGMENT_POPULAR; //default sorting is "popular"
 
     public MainActivityFragment() {
-
     }
 
-    public static MainActivityFragment newInstance(/* any params here */) {
-        MainActivityFragment fragment = new MainActivityFragment();
-        //send params to the new fragment
-        //Bundle args = new Bundle();
-        //args.put...(..., ...);
-        //fragment.setArguments(args);
-        return fragment;
+    @NonNull
+    public static MainActivityFragment newInstance() {
+        return new MainActivityFragment();
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        //do not destroy the main fragment when configuration changes
-        setRetainInstance(true);
     }
 
     @Override
@@ -64,19 +77,46 @@ public class MainActivityFragment extends Fragment
         setHasOptionsMenu(true);
 
         View fragmentView = inflater.inflate(R.layout.fragment_main_activity, container, false);
-        posterGridView = fragmentView.findViewById(R.id.gridview_poster);
-        posterGridView.setOnItemClickListener(
-                new AdapterView.OnItemClickListener() {
-                    @Override
-                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                        launchDetailActivity(position);
-                    }
-                }
-        );
+        unbinder = ButterKnife.bind(this, fragmentView);
 
-        getMovies(currentSortOrder);
+        rvPosters.setLayoutManager(new GridLayoutManager(rvPosters.getContext(), POSTER_COLUMN_COUNT));
+        rvPostersAdapter = new PostersAdapter(getActivity(), this);
+        rvPosters.setAdapter(rvPostersAdapter);
+
+        if (savedInstanceState == null) {
+            getMovies(currentSortOrder);
+        } else {
+            restoreInstanceState(savedInstanceState);
+            rvPostersAdapter.reloadData(movieInfos);
+        }
 
         return fragmentView;
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        unbinder.unbind();
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putParcelableArrayList(MOVIE_INFOS_PARCELABLE_NAME, new ArrayList<>(movieInfos));
+    }
+
+    private void restoreInstanceState(Bundle savedInstanceState) {
+        movieInfos = savedInstanceState.getParcelableArrayList(MOVIE_INFOS_PARCELABLE_NAME);
+    }
+
+    @Override
+    public void onPosterClick(int position) {
+        //start the detail activity, passing to it the MovieInfo object at the current position
+        Intent intent = new Intent(getActivity(), DetailActivity.class);
+        if (movieInfos != null) {
+            intent.putExtra(MovieInfo.MOVIE_INFO_PARCELABLE_NAME, movieInfos.get(position));
+        }
+        startActivity(intent);
     }
 
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
@@ -89,11 +129,15 @@ public class MainActivityFragment extends Fragment
         switch (id) {
             case R.id.action_sort_most_popular:
                 //load popular movies
-                getMovies(NetworkUtils.THEMOVIEDB_URL_SEGMENT_POPULAR);
+                getMovies(TheMovieDBAPI.THEMOVIEDB_URL_SEGMENT_POPULAR);
                 return true;
             case R.id.action_sort_top_rated:
                 //load top-rated movies
-                getMovies(NetworkUtils.THEMOVIEDB_URL_SEGMENT_TOP_RATED);
+                getMovies(TheMovieDBAPI.THEMOVIEDB_URL_SEGMENT_TOP_RATED);
+                return true;
+            case R.id.action_show_favorite:
+                //load favorite movies
+                getMovies(TheMovieDBContract.THEMOVIEDB_URL_SEGMENT_FAVORITE);
                 return true;
         }
 
@@ -101,123 +145,89 @@ public class MainActivityFragment extends Fragment
     }
 
     private void getMovies(String sortOrder) {
+        currentSortOrder = sortOrder;
+
+        switch (sortOrder) {
+            case TheMovieDBAPI.THEMOVIEDB_URL_SEGMENT_POPULAR:
+                if (!checkOnline()) return;
+                TheMovieDBAPIClient.getInstance().getPopularMovies(BuildConfig.THE_MOVIE_DB_API_KEY).enqueue(this);
+                break;
+            case TheMovieDBAPI.THEMOVIEDB_URL_SEGMENT_TOP_RATED:
+                if (!checkOnline()) return;
+                TheMovieDBAPIClient.getInstance().getTopRatedMovies(BuildConfig.THE_MOVIE_DB_API_KEY).enqueue(this);
+                break;
+            case TheMovieDBContract.THEMOVIEDB_URL_SEGMENT_FAVORITE:
+                getActivity().getSupportLoaderManager().initLoader(FAVORITE_LOADER_ID, null, this);
+                break;
+        }
+    }
+
+    @NonNull
+    private Boolean checkOnline() {
         //check if network connection is available
         if (!NetworkUtils.isOnline(getActivity())) {
             if (mCallback != null) {
                 mCallback.onError(getResources().getString(R.string.not_online_error_text));
             }
-            return;
-        }
-
-        //build URL to request data
-        URL url;
-        try {
-            currentSortOrder = sortOrder;
-            url = NetworkUtils.getURL(sortOrder, getResources().getString(R.string.themoviedb_api_key));
-        } catch (MalformedURLException e) {
-            if (mCallback != null) {
-                mCallback.onError(getResources().getString(R.string.url_error_text));
-            }
-            return;
-        }
-
-        //start loader to load data from www.themoviedb.org
-        Bundle loaderBundle = new Bundle();
-        loaderBundle.putSerializable(MOVIES_LOADER_URL_PARAM_NAME, url);
-
-        LoaderManager loaderManager = getLoaderManager();
-        Loader<String> moviesLoader = loaderManager.getLoader(MOVIES_LOADER_ID);
-        if (moviesLoader == null) {
-            loaderManager.initLoader(MOVIES_LOADER_ID, loaderBundle, this);
+            return false;
         } else {
-            loaderManager.restartLoader(MOVIES_LOADER_ID, loaderBundle, this);
+            return true;
         }
     }
 
     @Override
-    public Loader<String> onCreateLoader(int id, Bundle args) {
-        return new MoviesInfoLoader(getActivity(), args);
-    }
+    public void onResponse(@NonNull Call<ListWrapper<MovieInfo>> call, @NonNull Response<ListWrapper<MovieInfo>> response) {
+        if (response.isSuccessful()) {
+            ListWrapper<MovieInfo> movieInfosWrapper = response.body();
 
-    @Override
-    public void onLoadFinished(Loader<String> loader, String data) {
-        //check if any data is returned
-        if (data == null) {
+            if (movieInfosWrapper != null) {
+                switch (currentSortOrder) {
+                    case TheMovieDBAPI.THEMOVIEDB_URL_SEGMENT_POPULAR:
+                        getActivity().setTitle(getResources().getString(R.string.title_activity_main_popular));
+                        break;
+                    case TheMovieDBAPI.THEMOVIEDB_URL_SEGMENT_TOP_RATED:
+                        getActivity().setTitle(getResources().getString(R.string.title_activity_main_top_rated));
+                        break;
+                }
+
+                movieInfos = movieInfosWrapper.results;
+                rvPostersAdapter.reloadData(movieInfos);
+            }
+        } else {
             if (mCallback != null) {
                 mCallback.onError(getResources().getString(R.string.network_error_text));
             }
-            return;
-        }
-
-        //parse JSON data to MovieInfo objects
-        try {
-            movieInfos = JsonUtils.getMoviesFromJson(data);
-        } catch (JSONException e) {
-            if (mCallback != null) {
-                mCallback.onError(getResources().getString(R.string.json_error_text));
-            }
-            return;
-        }
-
-        if (movieInfos != null) {
-            //set activity title to reflect current order
-            switch (currentSortOrder) {
-                case NetworkUtils.THEMOVIEDB_URL_SEGMENT_POPULAR:
-                    getActivity().setTitle(getResources().getString(R.string.title_activity_main_popular));
-                    break;
-                case NetworkUtils.THEMOVIEDB_URL_SEGMENT_TOP_RATED:
-                    getActivity().setTitle(getResources().getString(R.string.title_activity_main_top_rated));
-                    break;
-            }
-            //load movie posters into the gridview
-            posterGridView.setAdapter(new MovieInfoAdapter(getActivity(), movieInfos));
         }
     }
 
     @Override
-    public void onLoaderReset(Loader<String> loader) {
-        //not used but required
-    }
-
-    public static class MoviesInfoLoader extends AsyncTaskLoader<String> {
-
-        Bundle args;
-
-        public MoviesInfoLoader(Context context, Bundle args) {
-            super(context);
-            this.args = args;
-        }
-
-        @Override
-        protected void onStartLoading() {
-            if (args == null) {
-                return;
-            }
-            forceLoad();
-        }
-
-        @Override
-        public String loadInBackground() {
-            URL url = (URL) args.getSerializable(MOVIES_LOADER_URL_PARAM_NAME);
-
-            if (url == null) {
-                return null;
-            }
-
-            //execute query to www.themoviesdb.org and return JSON result
-            try {
-                return NetworkUtils.getResultFromUrl(url);
-            } catch (IOException e) {
-                return null;
-            }
+    public void onFailure(@NonNull Call<ListWrapper<MovieInfo>> call, @NonNull Throwable t) {
+        if (mCallback != null) {
+            mCallback.onError(getResources().getString(R.string.network_error_text));
         }
     }
 
-    private void launchDetailActivity(int position) {
-        //start the detail activity, passing to it the MovieInfo object at the current position
-        Intent intent = new Intent(getActivity(), DetailActivity.class);
-        intent.putExtra(MovieInfo.MOVIE_INFO_PARCELABLE_NAME, movieInfos.get(position));
-        startActivity(intent);
+    @Override
+    public Loader<Cursor> onCreateLoader(int loaderId, Bundle bundle) {
+        switch (loaderId) {
+            case FAVORITE_LOADER_ID:
+                return TheMovieDBResolver.getFavoriteMoviesLoader(getActivity());
+            default:
+                throw new RuntimeException(getResources().getString(R.string.loader_not_implemented_error_text) + loaderId);
+        }
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        getActivity().setTitle(getResources().getString(R.string.title_activity_main_favorite));
+        TheMovieDBResolver.loadFavoriteMoviesInList(data, movieInfos);
+        rvPostersAdapter.reloadData(movieInfos);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        movieInfos.clear();
+        rvPostersAdapter.reloadData(movieInfos);
     }
 
     @Override
